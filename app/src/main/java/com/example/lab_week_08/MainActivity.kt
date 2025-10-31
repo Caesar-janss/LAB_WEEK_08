@@ -1,16 +1,14 @@
 package com.example.lab_week_08
 
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Button
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.work.Constraints
-import androidx.work.Data
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequest
-import androidx.work.WorkManager
+import androidx.work.*
 import com.example.lab_week_08.worker.FirstWorker
 import com.example.lab_week_08.worker.SecondWorker
 
@@ -30,13 +28,17 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
+        // ✅ Add notification permission request for Android 13+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
+
         //Create a constraint of which your workers are bound to.
         //Here the workers cannot execute the given process if
         //there's no internet connection
         val networkConstraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
-
         val id = "001"
 
         //There are two types of work request:
@@ -83,13 +85,28 @@ class MainActivity : AppCompatActivity() {
                     showResult("First process is done")
                 }
             }
-
         workManager.getWorkInfoByIdLiveData(secondRequest.id)
             .observe(this) { info ->
                 if (info.state.isFinished) {
                     showResult("Second process is done")
                 }
             }
+
+        //Add two buttons to start and stop the foreground service
+        val btnStart = findViewById<Button>(R.id.btnStart)
+        val btnStop = findViewById<Button>(R.id.btnStop)
+
+        //The start button is used to start the service
+        btnStart.setOnClickListener {
+            val intent = Intent(this, NotificationService::class.java)
+            startService(intent)
+        }
+
+        //The stop button is used to stop the service
+        btnStop.setOnClickListener {
+            val intent = Intent(this, NotificationService::class.java)
+            stopService(intent)
+        }
     }
 
     //Build the data into the correct format before passing it to the worker as input
@@ -101,5 +118,11 @@ class MainActivity : AppCompatActivity() {
     //Show the result as toast
     private fun showResult(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    //Start the notification foreground service
+    private fun startNotificationService() {
+        val intent = Intent(this, NotificationService::class.java)
+        startService(intent)
     }
 }
